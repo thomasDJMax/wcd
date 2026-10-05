@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="相机成像交互模拟：体验广角、标准、长焦、微距、鱼眼与变焦，学习焦距、光圈、快门、ISO、对焦与景深。">
+<title>光影 · 相机成像实验室</title>
+<style>
+:root{--ink:#182138;--muted:#7b8195;--line:#e5e7ef;--violet:#7054f5;--soft:#f6f5ff;--track:#e7e9f1;--font:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}button,input{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #baaaff;outline-offset:4px}button:disabled{cursor:wait;opacity:.5}svg{display:block}button svg{width:19px;height:19px;flex-shrink:0}a{color:var(--violet);text-decoration:none}a:hover{text-decoration:underline}.shell{width:min(1400px,calc(100% - 80px));margin:auto}header{height:70px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;gap:13px;align-items:center;font-size:20px;font-weight:650;letter-spacing:1px}.brand svg{width:30px;height:30px}.button{border:1px solid #cdd2e2;border-radius:7px;background:#fff;color:var(--ink);min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:10px 15px;font-size:13px;font-weight:550;transition:background .18s,border-color .18s}.button:hover{background:#f6f5ff;border-color:#b6a7fb}.button.primary{background:var(--violet);color:#fff;border-color:var(--violet)}.button.primary:hover{background:#6044e7}.hero{text-align:center;padding:7px 0 24px}.hero h1{font-size:44px;line-height:1.3;letter-spacing:1px;margin:0 0 9px;font-weight:750}.hero p{color:var(--muted);font-size:16px;line-height:1.7;margin:0}.lens-tabs{display:flex;border-bottom:1px solid var(--line);gap:4px;margin-bottom:20px}.lens-tab{position:relative;border:0;background:none;padding:16px 31px;color:#5f677c;font-size:15px;white-space:nowrap;min-height:50px}.lens-tab:hover{background:#f9f8ff}.lens-tab[aria-selected=true]{color:var(--violet);font-weight:650}.lens-tab[aria-selected=true]:after{content:"";position:absolute;bottom:-1px;left:13px;right:13px;height:3px;border-radius:3px;background:var(--violet)}.experiment{display:grid;grid-template-columns:minmax(0,2.12fr) minmax(300px,1fr);gap:30px;align-items:start}.view-column{min-width:0}.viewfinder{position:relative;border-radius:8px;overflow:hidden;background:#172119;aspect-ratio:3/2;isolation:isolate}.viewfinder canvas{display:block;width:100%;height:100%;cursor:crosshair}.live-overlay{position:absolute;top:19px;left:24px;display:flex;gap:7px;pointer-events:none;color:#fff;font-size:11px;letter-spacing:.4px}.glass-label{background:#19241bbb;backdrop-filter:blur(10px);padding:6px 10px;border-radius:6px;display:flex;gap:7px;align-items:center}.live-dot{height:6px;width:6px;border-radius:50%;background:#ff685a}.corner{position:absolute;width:25px;height:25px;border-color:#ffffffca;border-style:solid;pointer-events:none}.tl{top:16px;left:16px;border-width:2px 0 0 2px}.tr{top:16px;right:16px;border-width:2px 2px 0 0}.bl{bottom:16px;left:16px;border-width:0 0 2px 2px}.br{bottom:16px;right:16px;border-width:0 2px 2px 0}.focus-box{position:absolute;left:calc(50% - 22px);top:calc(50% - 22px);width:44px;height:44px;border:1.5px solid #ffffffdc;box-shadow:0 0 0 1px #00000015;pointer-events:none;transition:border-color .2s}.focus-box.locked{border-color:#a5f5bb}.focus-box:after{content:"+";color:#fff;position:absolute;left:15px;top:9px;font-size:15px;font-weight:200}.camera-hud{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:20px;white-space:nowrap;background:#1f2535a6;color:#fff;padding:9px 18px;border-radius:6px;backdrop-filter:blur(10px);font-family:var(--font);font-size:12px;pointer-events:none}.thirds{position:absolute;inset:0;pointer-events:none;display:none;background:linear-gradient(to right,transparent 33.2%,#ffffff50 33.2%,#ffffff50 33.4%,transparent 33.4%,transparent 66.5%,#ffffff50 66.5%,#ffffff50 66.7%,transparent 66.7%),linear-gradient(to bottom,transparent 33.2%,#ffffff50 33.2%,#ffffff50 33.4%,transparent 33.4%,transparent 66.5%,#ffffff50 66.5%,#ffffff50 66.7%,transparent 66.7%)}.thirds.on{display:block}.loading{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px;background:#1c2a22}.loading.hidden{display:none}.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}.flash.active{animation:flash .35s ease-out}@keyframes flash{0%{opacity:.8}100%{opacity:0}}.metrics{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:15px;padding:19px 0 15px;border-bottom:1px solid var(--line)}.metric+.metric{border-left:1px solid var(--line);padding-left:18px}.metric-label{color:var(--muted);font-size:12px;margin-bottom:6px}.metric-value{font-size:17px;font-weight:650;font-variant-numeric:tabular-nums}.metric-value small{font-size:12px;font-weight:450}.view-tools{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px}.view-tip{font-size:12px;color:var(--muted);line-height:1.7}.toggle-tools{display:flex;gap:8px;flex-shrink:0}.toggle-tools .button{min-height:35px;padding:7px 10px;font-size:12px}.button[aria-pressed=true]{background:var(--soft);color:var(--violet);border-color:#c7bcff}.control-rail{padding-left:23px;border-left:1px solid var(--line)}h2{font-size:21px;line-height:1.4;margin:0 0 20px;font-weight:680}.control{margin:0 0 20px}.control-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:14px;font-weight:600}.control-heading output{font-variant-numeric:tabular-nums;font-weight:600}.control input[type=range]{-webkit-appearance:none;appearance:none;background:linear-gradient(to right,var(--violet) 0%,var(--violet) var(--fill,40%),var(--track) var(--fill,40%),var(--track) 100%);height:7px;border-radius:9px;width:100%;display:block;margin:7px 0 0;cursor:pointer}.control input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border:2px solid #fff;background:var(--violet);border-radius:50%;box-shadow:0 1px 5px #42308935}.control input[type=range]::-moz-range-thumb{width:14px;height:14px;border:2px solid #fff;background:var(--violet);border-radius:50%;box-shadow:0 1px 5px #42308935}.control-hint{font-size:11px;color:var(--muted);margin:9px 0 0;line-height:1.65}.actions{display:grid;grid-template-columns:1fr 1.15fr;gap:9px;margin:24px 0 0}.actions .button{font-size:14px;min-height:45px;padding:12px 8px}.scene-settings{margin-top:21px;padding-top:17px;border-top:1px solid var(--line)}.scene-settings .control{margin-bottom:10px}.scene-head{display:flex;gap:10px;justify-content:space-between;align-items:center}.mini-button{border:0;background:var(--soft);color:var(--violet);border-radius:5px;padding:4px 8px;font-size:11px;white-space:nowrap}.principle-band{margin-top:28px;border-top:1px solid var(--line);padding-top:24px;display:grid;grid-template-columns:1.1fr 1.15fr 1.05fr;gap:28px}.principle-band>div+div{border-left:1px solid var(--line);padding-left:25px}.principle-band h2{font-size:18px;margin-bottom:10px}.principle-band p{font-size:13px;line-height:1.85;color:#737c91;margin:0}.lens-range{color:var(--violet);font-size:12px;font-weight:600;margin-bottom:7px}.optics-diagram{width:100%;height:140px}.diagram-caption{text-align:center;font-size:11px;color:var(--muted);line-height:1.6}.formula{font-family:Georgia,"Times New Roman",serif;font-size:24px;letter-spacing:2px;color:var(--ink);margin:9px 0 10px}.fra{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:21px;line-height:1.1;letter-spacing:0;min-width:21px}.fra span:first-child{border-bottom:1px solid var(--ink);padding:0 5px 3px}.fra span:last-child{padding-top:3px;font-style:italic}.knowledge{margin-top:29px;border-top:1px solid var(--line);padding-top:25px}.knowledge h2{font-size:20px}.lens-guide{display:grid;grid-template-columns:repeat(3,1fr);gap:0 26px}.guide-item{padding:17px 0 19px;border-bottom:1px solid var(--line)}.guide-item h3{font-size:14px;margin:0 0 8px;display:flex;gap:12px;align-items:center}.guide-index{color:var(--violet);font-size:11px;font-weight:500;letter-spacing:1px}.guide-item p{font-size:12px;color:var(--muted);line-height:1.8;margin:0}.notes{margin:21px 0 25px;color:#8b91a0;font-size:11px;line-height:1.85}.notes p{margin:7px 0}.source-links{display:flex;flex-wrap:wrap;gap:7px 18px;font-size:11px}footer{display:flex;justify-content:space-between;padding:16px 0 25px;border-top:1px solid var(--line);font-size:11px;color:#9196a6}.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(12px);color:#fff;background:#20283eee;box-shadow:0 5px 30px #0002;padding:11px 20px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9;max-width:90%;text-align:center}.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(min-width:1500px){.control{margin-bottom:25px}.control-hint{font-size:12px}.control-heading{font-size:15px}.hero{padding-bottom:28px}.camera-hud{font-size:13px}}@media(max-width:1100px){.shell{width:calc(100% - 48px)}.experiment{grid-template-columns:minmax(0,1.7fr) minmax(275px,1fr);gap:22px}.control-rail{padding-left:18px}.control{margin-bottom:17px}.control-hint{font-size:10px}.view-tools{align-items:flex-start;flex-direction:column}.principle-band{gap:19px}.principle-band>div+div{padding-left:18px}.lens-tab{padding:14px 25px}.hero h1{font-size:38px}}@media(max-width:780px){.shell{width:calc(100% - 32px)}header{height:65px}.brand{font-size:16px;gap:8px}.brand svg{width:24px;height:24px}.reset-label{display:none}.reset-button{padding:8px;min-width:36px;min-height:36px}.hero{padding:15px 0 18px}.hero h1{font-size:30px;letter-spacing:0}.hero p{font-size:12px}.lens-tabs{gap:0;justify-content:space-between;margin-bottom:15px}.lens-tab{font-size:13px;padding:12px 9px;min-height:44px;flex:1}.lens-tab[aria-selected=true]:after{left:7px;right:7px}.experiment{display:flex;flex-direction:column;gap:24px}.view-column,.control-rail{width:100%}.control-rail{padding:0;border-left:0;border-top:1px solid var(--line);padding-top:21px}.control-rail h2{font-size:19px}.controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.control{margin-bottom:21px}.control-hint{font-size:11px}.scene-settings{margin-top:19px}.actions{margin-top:1px}.view-tools{flex-direction:row;align-items:center;gap:7px}.view-tip{font-size:10px;max-width:45%}.toggle-tools{gap:6px}.toggle-tools .button{font-size:10px;padding:6px 7px;gap:5px}.toggle-tools svg{width:14px;height:14px}.live-overlay{top:13px;left:16px;font-size:8px;gap:5px}.glass-label{padding:5px 7px}.corner{width:16px;height:16px}.tl,.tr{top:10px}.bl,.br{bottom:10px}.tl,.bl{left:10px}.tr,.br{right:10px}.camera-hud{bottom:12px;padding:7px 10px;font-size:10px;gap:13px}.focus-box{width:33px;height:33px}.focus-box:after{left:10px;top:4px}.metrics{gap:7px;padding:15px 0}.metric+.metric{padding-left:10px}.metric-label{font-size:10px;line-height:1.5}.metric-value{font-size:13px}.metric-value small{font-size:10px}.principle-band{grid-template-columns:1fr;gap:18px;margin-top:25px}.principle-band>div+div{padding-left:0;border-left:0;border-top:1px solid var(--line);padding-top:15px}.principle-band>div:nth-child(2){max-width:420px;width:100%;margin:auto}.principle-band h2{font-size:18px}.lens-guide{grid-template-columns:1fr 1fr;gap:0 20px}.guide-item p{font-size:11px}footer{gap:15px;line-height:1.7}.notes{font-size:10px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+<style>
+.photo-dialog{border:1px solid var(--line);border-radius:12px;padding:22px;width:min(620px,calc(100% - 28px));max-height:90vh;color:var(--ink);background:#fff;box-shadow:0 20px 90px #11182740}.photo-dialog::backdrop{background:#111827a0;backdrop-filter:blur(5px)}.photo-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.photo-head h2{font-size:19px;margin:0}.close-button{background:none;border:0;color:var(--muted);font-size:24px;line-height:1;padding:3px 6px}.photo-dialog img{width:100%;display:block;border-radius:6px;aspect-ratio:3/2;background:#182138}.photo-meta{color:var(--muted);font-size:12px;margin:13px 0 19px;text-align:center;line-height:1.7}.photo-actions{display:flex;gap:10px;justify-content:flex-end}.photo-actions a:hover{text-decoration:none}.photo-save-hint{margin:12px 0 0;color:var(--muted);font-size:10px;text-align:right}
+</style>
+</head>
+<body>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs>
+<symbol id="icon-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h4l2-3h6l2 3h4a1 1 0 0 1 1 1v13H2V7a1 1 0 0 1 1-1Z"/><circle cx="12" cy="12.5" r="4"/><path d="M18.5 8.5h.01"/></g></symbol>
+<symbol id="icon-reset" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 9a8 8 0 1 1 0 6M4 4v5h5"/></g></symbol>
+<symbol id="icon-focus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v5m0 10v5M2 12h5m10 0h5"/></g></symbol>
+<symbol id="icon-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18m6-18v18M3 9h18M3 15h18"/></g></symbol>
+<symbol id="icon-motion" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="4" r="2"/><path d="m6 10 5-3 3 5 5-2m-8-3-2 8 5 3-2 4m-3-7-4 7M2 6h5M1 12h4"/></g></symbol>
+</defs></svg>
+<div class="shell">
+<header><div class="brand"><svg aria-hidden="true"><use href="#icon-camera"/></svg><span>光影 · 相机实验室</span></div><button class="button reset-button" id="reset"><svg aria-hidden="true"><use href="#icon-reset"/></svg><span class="reset-label">重置设置</span><span class="sr-only" style="position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden">重置相机设置</span></button></header>
+<section class="hero"><h1>看见光，理解成像。</h1><p>调整镜头与相机参数，让原理变成眼前的画面。</p></section>
+<div class="lens-tabs" role="tablist" aria-label="相机镜头类型">
+<button class="lens-tab" role="tab" data-lens="wide" aria-selected="false" aria-controls="simulator">广角</button><button class="lens-tab" role="tab" data-lens="standard" aria-selected="true" aria-controls="simulator">标准</button><button class="lens-tab" role="tab" data-lens="tele" aria-selected="false" aria-controls="simulator">长焦</button><button class="lens-tab" role="tab" data-lens="macro" aria-selected="false" aria-controls="simulator">微距</button><button class="lens-tab" role="tab" data-lens="fish" aria-selected="false" aria-controls="simulator">鱼眼</button><button class="lens-tab" role="tab" data-lens="zoom" aria-selected="false" aria-controls="simulator">变焦</button>
+</div>
+<main class="experiment" id="simulator" role="tabpanel" aria-label="相机取景与参数">
+<div class="view-column">
+<div class="viewfinder" id="viewfinder"><canvas id="preview" aria-label="实时相机取景画面，点击主体或背景进行对焦" role="img"></canvas><div class="thirds" id="thirds"></div><div class="live-overlay"><span class="glass-label"><i class="live-dot"></i>LIVE</span><span class="glass-label" id="format-label">全画幅 · 36 × 24 mm</span></div><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="focus-box" id="focus-box"></div><div class="camera-hud"><span id="hud-focal">50 mm</span><span id="hud-aperture">f/2.8</span><span id="hud-shutter">1/125 s</span><span id="hud-iso">ISO 100</span></div><div class="loading" id="loading">正在准备取景画面…</div><div class="flash" id="flash"></div></div>
+<div class="metrics"><div class="metric"><div class="metric-label" id="fov-label">水平视角 · ∞ 对焦参考</div><div class="metric-value" id="fov">39.6°</div></div><div class="metric"><div class="metric-label" id="dof-label">景深范围</div><div class="metric-value" id="dof">2.73 – 3.33 <small>m</small></div></div><div class="metric"><div class="metric-label">相对画面亮度</div><div class="metric-value" id="exposure">+0.0 <small>档</small></div></div></div>
+<div class="view-tools"><span class="view-tip" id="focus-tip">点击花瓶或背景对焦 · 背景位于 12.0 m</span><div class="toggle-tools"><button class="button" id="grid-toggle" aria-pressed="false"><svg aria-hidden="true"><use href="#icon-grid"/></svg>显示网格</button><button class="button" id="motion-toggle" aria-pressed="false"><svg aria-hidden="true"><use href="#icon-motion"/></svg>主体运动</button></div></div>
+</div>
+<aside class="control-rail" aria-label="相机参数控制"><h2>拍摄参数</h2>
+<div class="controls-grid">
+<div class="control"><div class="control-heading"><label for="focal">焦距</label><output id="focal-out" for="focal">50 mm</output></div><input id="focal" type="range" min="35" max="70" value="50" step="1"><p class="control-hint" id="focal-hint">焦距越长，视角越窄，主体在画面中越大。</p></div>
+<div class="control"><div class="control-heading"><label for="aperture">光圈</label><output id="aperture-out" for="aperture">f/2.8</output></div><input id="aperture" type="range" min="0" max="10" value="3" step="1"><p class="control-hint">f 值越小，入瞳越大，景深越浅、进光越多。</p></div>
+<div class="control"><div class="control-heading"><label for="shutter">快门</label><output id="shutter-out" for="shutter">1/125 s</output></div><input id="shutter" type="range" min="0" max="13" value="4" step="1"><p class="control-hint">曝光越久越明亮；开启主体运动可观察拖影。</p></div>
+<div class="control"><div class="control-heading"><label for="iso">ISO</label><output id="iso-out" for="iso">100</output></div><input id="iso" type="range" min="0" max="6" value="0" step="1"><p class="control-hint">提高输出增益，让画面更亮；噪点也更明显。</p></div>
+<div class="control"><div class="control-heading"><label for="focus">对焦距离</label><output id="focus-out" for="focus">3.00 m</output></div><input id="focus" type="range" min="0" max="1000" value="637" step="1"><p class="control-hint">改变清晰平面；自动对焦会对准花瓶主体。</p></div>
+</div>
+<div class="actions"><button class="button" id="autofocus"><svg aria-hidden="true"><use href="#icon-focus"/></svg>自动对焦</button><button class="button primary" id="capture" disabled><svg aria-hidden="true"><use href="#icon-camera"/></svg>拍摄照片</button></div>
+<div class="scene-settings"><div class="scene-head"><div class="control-heading" style="margin-bottom:9px;flex:1"><label for="distance">拍摄距离</label><output id="distance-out" for="distance">3.00 m</output></div><button class="mini-button" id="macro-one" hidden>1∶1 近摄</button></div><div class="control"><input id="distance" type="range" min="0" max="1000" value="645" step="1"><p class="control-hint">移动机位会改变透视；距离从理想镜头主平面计。</p></div></div>
+</aside>
+</main>
+<section class="principle-band" aria-label="当前镜头与成像原理"><div><h2 id="lens-title">当前镜头：标准镜头</h2><div class="lens-range" id="lens-range">全画幅 · 35–70 mm</div><p id="lens-description">全画幅常用的标准焦段。取景范围适中，适合表现主体与环境的关系；透视由拍摄位置决定。</p></div><div><svg class="optics-diagram" id="optics-diagram" viewBox="0 0 350 140" role="img" aria-label="镜头将物体光线会聚在传感器上，形成倒立实像"></svg><div class="diagram-caption" id="diagram-caption">传感器接收倒立实像，取景画面经处理后正立显示。</div></div><div><h2>成像原理</h2><div class="formula" id="formula"><span class="fra"><span>1</span><span>f</span></span> = <span class="fra"><span>1</span><span>u</span></span> + <span class="fra"><span>1</span><span>v</span></span></div><p id="principle-text">多片镜组将光线汇聚到传感器。光圈控制进光与景深，快门控制曝光时间。</p><p id="image-distance" style="margin-top:6px;font-size:11px">像距 50.85 mm · 主体倍率 0.017×</p></div></section>
+<section class="knowledge"><h2>每一种镜头，如何改变画面？</h2><div class="lens-guide" id="lens-guide"></div></section>
+<div class="notes"><p>固定机位时，改变焦距主要改变取景范围。广角的纵深感与长焦的压缩感，通常来自为保持相同构图而改变拍摄距离。</p><p>模型说明：分层场景与理想薄透镜模拟取景和离焦，景深清晰阈值为 0.03 mm；鱼眼为等距映射示意，离焦与景深为近轴参考。曝光、噪点与运动模糊为教学近似，非具体镜头的光学或传感器标定。微距含理想延伸曝光损失，未模拟衍射、像差和真实内对焦结构。</p><div class="source-links"><a href="https://www.nikonusa.com/learn-and-explore/c/tips-and-techniques/understanding-focal-length" target="_blank" rel="noopener">尼康 · 焦距与镜头</a><a href="https://www-graphics.stanford.edu/courses/cs178-11/applets/gaussian.html" target="_blank" rel="noopener">斯坦福 · 镜头成像</a><a href="https://www.graphics.stanford.edu/courses/cs178/applets/dof.html" target="_blank" rel="noopener">斯坦福 · 景深原理</a></div></div>
+<footer><span>光影 · 相机实验室</span><span>纯 HTML / CSS / JavaScript · 可离线运行</span></footer>
+</div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<dialog class="photo-dialog" id="photo-dialog" aria-labelledby="photo-title"><div class="photo-head"><h2 id="photo-title">拍摄完成</h2><button class="close-button" id="photo-close" aria-label="关闭照片预览">×</button></div><img id="captured-photo" alt="当前相机参数拍摄的照片"><p class="photo-meta" id="photo-meta"></p><div class="photo-actions"><button class="button" id="photo-return">继续取景</button><a class="button primary" id="save-photo" download="相机模拟照片.png">保存 PNG</a></div><p class="photo-save-hint">也可右键或长按照片，保存当前图像。</p></dialog>
+<script>
+'use strict';
+(() => {
+const $ = id => document.getElementById(id);
+const APERTURES=[1.4,1.8,2,2.8,4,5.6,8,11,16,22,32];
+const SHUTTERS=[1/2000,1/1000,1/500,1/250,1/125,1/60,1/30,1/15,1/8,1/4,1/2,1,2,4];
+const ISOS=[100,200,400,800,1600,3200,6400];
+const LENSES={
+wide:{name:'广角镜头',f:24,min:14,max:35,distance:3,range:'14–35 mm · 广阔环境',description:'短焦距带来宽阔视角，同一机位能容纳更多环境。靠近主体拍摄时，近处相对远处显得更大，纵深感更明显。',principle:'多片正、负透镜组合得到较短的有效焦距。直线投影保留直线，画面边缘的比例拉伸仍可能明显。',guide:'较短的有效焦距把更宽的景物投到传感器上。适合风景、建筑与环境叙事；近距离拍摄会强调前后大小差。'},
+standard:{name:'标准镜头',f:50,min:35,max:70,distance:3,range:'35–70 mm · 适中的视角',description:'全画幅常用的标准焦段。取景范围适中，适合表现主体与环境的关系；透视由拍摄位置决定。',principle:'多片镜组将来自物体的光线汇聚到传感器。光圈控制进光与景深，快门控制曝光时间。',guide:'全画幅常用约 50 mm 作为标准焦段。视角适中，适合生活记录、人像与静物；并不等同于人眼的光学结构。'},
+tele:{name:'长焦镜头',f:135,min:70,max:200,distance:7,range:'70–200 mm · 拉近远处主体',description:'长焦距缩小取景范围，让远处主体在画面中更大。为保持构图而退远拍摄时，前后景相对大小变化形成“压缩感”。',principle:'镜组组合形成较长的有效焦距，使相同入射角对应更大的像高。真实长焦可用正、负镜组缩短镜身。',guide:'较长的有效焦距使取景范围变窄。同一机位只是放大取景；退远并维持主体大小，才会改变常说的空间压缩感。'},
+macro:{name:'微距镜头',f:60,min:50,max:100,distance:.45,range:'60 mm 示例 · 近距离与大倍率',description:'近距离对焦与专门镜组设计带来较大的成像倍率。1∶1 表示传感器上的像与实物等大，并非简单的数字放大。',principle:'理想薄透镜中，u = v = 2f 时倍率为 1∶1。真实微距依靠镜组移动或内对焦；工作距离不能直接用 2f 代替。',guide:'微距的关键是近摄能力与最大成像倍率，焦距本身不能决定倍率。试试“1∶1 近摄”，观察细节、浅景深与曝光变化。'},
+fish:{name:'鱼眼镜头',f:12,min:8,max:16,distance:3,range:'8–16 mm · 非直线投影',description:'把很大的入射角范围压入画面，偏离画面中心的直线常变成曲线。它与普通广角的直线投影有不同的映射方式。',principle:'本演示采用等距模型 r = fθ：入射方向的角度映射为距中心的半径。具体鱼眼镜头可采用不同投影。',guide:'鱼眼采用特殊角度到像高的映射，牺牲直线保持来容纳宽广视野。本例展示等距映射；有限场景素材不代表真实 180° 镜头覆盖。'},
+zoom:{name:'变焦镜头',f:35,min:24,max:120,distance:3,range:'24–120 mm · 连续改变取景',description:'移动内部镜组，改变整个镜头的有效焦距。同一机位可连续改变取景范围与主体大小，无需更换镜头。',principle:'变倍组与补偿组协同移动，改变有效焦距并维持合适的成像位置。这里用随焦距更新的薄透镜模型表示。',guide:'镜头内部的变倍与补偿镜组协同工作。拖动焦距可以从广角过渡到长焦；固定机位的变焦不会改变透视关系。'}
+};
+const DEFAULT={lens:'standard',f:50,ai:3,ti:4,ii:0,focus:3,distance:3,grid:false,motion:false};
+let state={...DEFAULT}, ready=false, lastFrame=0, dirty=true, toastTimer=0, subjectRect=null, fishMap=null,fishKey='',normalDistance=3,flowerMask=null;
+const canvas=$('preview'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+const scene=document.createElement('canvas'),sc=scene.getContext('2d',{willReadFrequently:true});
+const flowerLayer=document.createElement('canvas'),fc=flowerLayer.getContext('2d');
+const bg=new Image(),flower=new Image();
+const ASSETS={background:'__BACKGROUND_DATA__',subject:'__SUBJECT_DATA__'};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const logPosition=(v,min,max)=>Math.round(1000*Math.log(v/min)/Math.log(max/min));
+const logValue=(v,min,max)=>min*Math.pow(max/min,Number(v)/1000);
+const focusMin=()=>Math.max(.08,state.f/1000+.025);
+const distanceMin=()=>Math.max(.12,state.f/1000+.025);
+const distanceText=v=>v<1?(v*100).toFixed(1)+' cm':v.toFixed(2)+' m';
+const shutterText=t=>t<1?'1/'+Math.round(1/t)+' s':t+' s';
+function physics(){
+ const f=state.f,s=state.focus*1000,z=state.distance*1000,N=APERTURES[state.ai],t=SHUTTERS[state.ti],iso=ISOS[state.ii];
+ const v=f*s/(s-f),m=v/z,k=N*.03*(s-f)/(f*f),near=s/(1+k),far=k<1?s/(1-k):Infinity;
+ const blur=depth=>f*f*Math.abs(depth-s)/(N*depth*(s-f));
+ const effectiveN=N*v/f,baseN=2.8*(50*3000/(3000-50))/50;
+ const brightness=Math.log2(t/(1/125))-2*Math.log2(effectiveN/baseN)+Math.log2(iso/100);
+ return {f,s,z,N,t,iso,v,m,near,far,blur,brightness,bgZ:z+9000};
+}
+function paintTrack(el){const v=(Number(el.value)-Number(el.min))/(Number(el.max)-Number(el.min));el.style.setProperty('--fill',(v*100).toFixed(2)+'%');}
+function drawOptics(p){
+ const f=state.f/1000,z=state.distance,vObj=f*z/(z-f),vFocus=p.v/1000;
+ const ox=34,lx=168,ix=276,y=69,oh=36,ih=oh*(ix-lx)/(lx-ox);
+ const sensorX=lx+(ix-lx)*clamp(vFocus/vObj,.25,1.65);
+ const out=(at,x)=>y-at+(x-lx)/(ix-lx)*(at+ih);
+ $('optics-diagram').innerHTML=`<defs><linearGradient id="lens-fill"><stop stop-color="#d9eafc" stop-opacity=".5"/><stop offset=".5" stop-color="#e8f4fc"/><stop offset="1" stop-color="#adcde6" stop-opacity=".7"/></linearGradient></defs><path d="M15 ${y}H337" stroke="#b8bfcd" stroke-width="1" stroke-dasharray="4 4"/><path d="M${ox} ${y}V${y-oh}" stroke="#e49b48" stroke-width="4"/><path d="m${ox-5} ${y-oh+7} 5-8 5 8" fill="none" stroke="#e49b48" stroke-width="3"/><g stroke="#917bea" stroke-width="1.25" fill="none" opacity=".8"><path d="M${ox} ${y-oh}L${lx} ${y-oh}L${sensorX} ${out(oh,sensorX)}"/><path d="M${ox} ${y-oh}L${lx} ${y}L${sensorX} ${out(0,sensorX)}"/><path d="M${ox} ${y-oh}L${lx} ${y+oh}L${sensorX} ${out(-oh,sensorX)}"/></g><path d="M${lx} 21Q${lx-18} 69 ${lx} 117Q${lx+18} 69 ${lx} 21Z" fill="url(#lens-fill)" stroke="#6b95b2" stroke-width="1.2"/><rect x="${sensorX-3}" y="29" width="6" height="80" rx="1" fill="#687487"/><path d="M${ix} ${y}V${y+ih}" stroke="#7054f5" stroke-width="3"/><path d="m${ix-4} ${y+ih-6} 4 7 4-7" fill="none" stroke="#7054f5" stroke-width="2.5"/><g font-size="11" fill="#7b8195" text-anchor="middle"><text x="${ox}" y="134">物体</text><text x="${lx}" y="134">镜组</text><text x="${sensorX}" y="124">传感器</text></g>`;
+}
+function updateUI(){
+ const p=physics(),lens=LENSES[state.lens];
+ document.querySelectorAll('.lens-tab').forEach(b=>{const selected=b.dataset.lens===state.lens;b.setAttribute('aria-selected',selected);b.tabIndex=selected?0:-1;});
+ $('focal').min=lens.min;$('focal').max=lens.max;$('focal').value=state.f;
+ $('aperture').value=state.ai;$('shutter').value=state.ti;$('iso').value=state.ii;
+ $('focus').value=logPosition(state.focus,focusMin(),30);$('distance').value=logPosition(state.distance,distanceMin(),12);
+ for(const id of ['focal','aperture','shutter','iso','focus','distance'])paintTrack($(id));
+ $('focal-out').textContent=state.f+' mm';$('aperture-out').textContent='f/'+p.N;$('shutter-out').textContent=shutterText(p.t);$('iso-out').textContent=p.iso;$('focus-out').textContent=distanceText(state.focus);$('distance-out').textContent=distanceText(state.distance);
+ $('hud-focal').textContent=state.f+' mm';$('hud-aperture').textContent='f/'+p.N;$('hud-shutter').textContent=shutterText(p.t);$('hud-iso').textContent='ISO '+p.iso;
+ $('fov').textContent=state.lens==='fish'?'等距投影':(2*Math.atan(36/(2*state.f))*180/Math.PI).toFixed(1)+'°';
+ $('fov-label').textContent=state.lens==='fish'?'鱼眼视角 · 映射示意':'水平视角 · ∞ 对焦参考';
+ $('dof-label').textContent=state.lens==='fish'?'景深 · 近轴参考':'景深范围';
+ const unit=p.near<1000&&p.far<1000?10:1000,label=unit===10?'cm':'m';
+ $('dof').innerHTML=(p.near/unit).toFixed(2)+' – '+(Number.isFinite(p.far)?(p.far/unit).toFixed(2):'∞')+' <small>'+label+'</small>';
+ $('exposure').innerHTML=(p.brightness>=0?'+':'')+p.brightness.toFixed(1)+' <small>档</small>';
+ $('focus-tip').textContent='点击主体或背景对焦 · 背景 '+(p.bgZ/1000).toFixed(1)+' m';
+ $('grid-toggle').setAttribute('aria-pressed',state.grid);$('motion-toggle').setAttribute('aria-pressed',state.motion);$('thirds').classList.toggle('on',state.grid);
+ $('lens-title').textContent='当前镜头：'+lens.name;$('lens-range').textContent='全画幅 · '+lens.range;$('lens-description').textContent=lens.description;$('principle-text').textContent=lens.principle;
+ $('focal-hint').textContent=state.lens==='fish'?'特殊投影压缩边缘，画面中的直线可能弯曲。':state.lens==='zoom'?'移动镜组改变有效焦距，连续改变取景范围。':'焦距越长，视角越窄，主体在画面中越大。';
+ $('macro-one').hidden=state.lens!=='macro';
+ $('formula').innerHTML=state.lens==='fish'?'r = fθ':'<span class="fra"><span>1</span><span>f</span></span> = <span class="fra"><span>1</span><span>u</span></span> + <span class="fra"><span>1</span><span>v</span></span>';
+ $('image-distance').textContent='像距 '+p.v.toFixed(2)+' mm · 主体倍率 '+p.m.toFixed(3)+'×';
+ $('diagram-caption').textContent=state.lens==='fish'?'示意，非按比例：中心近轴成像，边缘另按等距模型映射。':'示意，非按比例：传感器接收倒立实像，取景画面正立显示。';
+ $('focus-box').classList.toggle('locked',Math.abs(state.focus-state.distance)<.01);
+ drawOptics(p);dirty=true;
+}
+function lensSelect(key){const previous=state.lens;if(key==='macro'&&previous!=='macro'){normalDistance=state.distance;state.distance=.45;state.focus=state.distance;}else if(previous==='macro'&&key!=='macro'){state.distance=normalDistance;state.focus=state.distance;}state.lens=key;state.f=LENSES[key].f;state.distance=Math.max(state.distance,distanceMin());state.focus=Math.max(state.focus,focusMin());fishMap=null;updateUI();}
+document.querySelectorAll('.lens-tab').forEach(b=>{b.addEventListener('click',()=>lensSelect(b.dataset.lens));b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const bs=[...document.querySelectorAll('.lens-tab')],i=bs.indexOf(b);let n=e.key==='Home'?0:e.key==='End'?bs.length-1:(i+(e.key==='ArrowRight'?1:-1)+bs.length)%bs.length;bs[n].focus();lensSelect(bs[n].dataset.lens);});});
+['focal','aperture','shutter','iso','focus','distance'].forEach(id=>$(id).addEventListener('input',e=>{
+ const val=Number(e.target.value);
+ if(id==='focal'){state.f=val;state.focus=Math.max(state.focus,focusMin());state.distance=Math.max(state.distance,distanceMin());fishMap=null;}
+ else if(id==='aperture')state.ai=val;else if(id==='shutter')state.ti=val;else if(id==='iso')state.ii=val;else if(id==='focus')state.focus=logValue(val,focusMin(),30);else if(id==='distance'){const following=Math.abs(state.focus-state.distance)<.025;state.distance=logValue(val,distanceMin(),12);if(following)state.focus=state.distance;}
+ updateUI();
+}));
+$('grid-toggle').addEventListener('click',()=>{state.grid=!state.grid;updateUI();});
+$('motion-toggle').addEventListener('click',()=>{state.motion=!state.motion;updateUI();if(state.motion)toast('已开启主体横向运动，调慢快门观察拖影');});
+$('reset').addEventListener('click',()=>{state={...DEFAULT};fishMap=null;$('focus-box').style.left='calc(50% - 22px)';$('focus-box').style.top='calc(50% - 22px)';updateUI();toast('已恢复标准镜头与默认拍摄参数');});
+$('autofocus').addEventListener('click',()=>{state.focus=state.distance;updateUI();toast('已对焦主体：'+distanceText(state.distance));});
+$('macro-one').addEventListener('click',()=>{state.distance=2*state.f/1000;state.focus=state.distance;updateUI();toast('理想 1∶1 近摄：u = v = 2f，景深变得很浅');});
+function toast(message){$('toast').textContent=message;$('toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('on'),2800);}
+function resize(){const w=Math.min(1200,Math.max(320,Math.round(canvas.getBoundingClientRect().width*1.25)));canvas.width=scene.width=flowerLayer.width=w;canvas.height=scene.height=flowerLayer.height=Math.round(w/1.5);fishMap=null;dirty=true;}
+function drawCover(context,img,cx,cy,dw,dh){context.drawImage(img,cx-dw/2,cy-dh/2,dw,dh);}
+function createFishMap(w,h,f,v){
+ // Inverse equidistant projection: r=f*theta, rectilinear source r=f*tan(theta).
+ const map=new Int32Array(w*h),pitch=w/36;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  const rx=(x-w/2)/pitch,ry=(y-h/2)/pitch,r=Math.hypot(rx,ry),theta=r/f;
+  if(theta>=Math.PI/2){map[y*w+x]=-1;continue;}
+  const gain=r>.00001?v*Math.tan(theta)/r:v/f,sx=Math.round(w/2+rx*gain*pitch),sy=Math.round(h/2+ry*gain*pitch);
+  map[y*w+x]=sx>=0&&sx<w&&sy>=0&&sy<h?(sy*w+sx)*4:-1;
+ }
+ return map;
+}
+function render(now=0){
+ if(!ready)return;
+ const p=physics(),w=canvas.width,h=canvas.height,pxPerMm=w/36;
+ sc.clearRect(0,0,w,h);sc.fillStyle='#5e6958';sc.fillRect(0,0,w,h);
+ const bgScale=Math.max(w/bg.width,h/bg.height)*p.v/18*12000/p.bgZ;
+ const bBlur=Math.min(45,p.blur(p.bgZ)*pxPerMm/4);
+ // Reflected copies fill crop edges of the finite source without introducing empty strips.
+ sc.save();sc.filter=`blur(${bBlur.toFixed(2)}px)`;
+ const bw=bg.width*bgScale,bh=bg.height*bgScale;
+ for(let iy=-1;iy<=1;iy++)for(let ix=-1;ix<=1;ix++){sc.save();sc.translate(w/2+ix*bw,h/2+iy*bh);sc.scale(ix%2?-1:1,iy%2?-1:1);sc.drawImage(bg,-bw/2,-bh/2,bw,bh);sc.restore();}sc.restore();
+ fc.clearRect(0,0,w,h);
+ const ph=900*p.v/p.z*w/36,pw=ph*flower.width/flower.height;
+ const macro=state.lens==='macro',anchorY=macro?.18:.53;
+ const baseX=w*.5,baseY=macro?h*.48:h*.5;
+ const amplitude=Math.min(.25,state.distance*.08),rate=1.6,timeSec=now/1000;
+ const worldShift=state.motion?amplitude*Math.sin(timeSec*rate):0;
+ const shift=worldShift*1000*p.v/p.z*pxPerMm;
+ const cx=baseX+shift,top=baseY-ph*anchorY;
+ // A separate foreground surface is at the subject depth, not the distant garden depth.
+ const tableTop=top+ph*.93;
+ if(!macro&&tableTop<h){sc.save();sc.filter=`blur(${Math.min(60,p.blur(p.z)*pxPerMm/4).toFixed(2)}px)`;sc.drawImage(bg,0,bg.height*.73,bg.width,bg.height*.2,-10,tableTop,w+20,h-tableTop+10);sc.restore();sc.save();sc.filter='blur(4px)';sc.fillStyle='#2d20172c';sc.beginPath();sc.ellipse(cx,top+ph*.974-2,Math.max(6,pw*.19),Math.max(3,ph*.009),0,0,Math.PI*2);sc.fill();sc.restore();}
+ const smear=state.motion?amplitude*rate*p.t*1000*p.v/p.z*pxPerMm:0;
+ const samples=smear>1?Math.min(60,Math.max(3,Math.ceil(smear/3))):1;
+ // Mean multiple positions, including the background at each exposure sample.
+ const subjectBlur=Math.min(60,p.blur(p.z)*pxPerMm/4);
+ fc.save();fc.filter=`blur(${subjectBlur.toFixed(2)}px)`;fc.globalCompositeOperation='lighter';fc.globalAlpha=1/samples;
+ for(let i=0;i<samples;i++){
+  const offsetTime=samples===1?0:(i/(samples-1)-.5)*p.t;
+  const dx=state.motion?(amplitude*Math.sin((timeSec+offsetTime)*rate)-worldShift)*1000*p.v/p.z*pxPerMm:0;
+  fc.drawImage(flower,cx-pw/2+dx,top,pw,ph);
+ }
+ fc.restore();sc.drawImage(flowerLayer,0,0);
+ subjectRect={x:cx-pw/2,y:top,w:pw,h:ph};
+ let pixels=sc.getImageData(0,0,w,h),data=pixels.data;
+ if(state.lens==='fish'){
+  const key=w+':'+h+':'+state.f+':'+p.v.toFixed(6);if(!fishMap||fishKey!==key){fishMap=createFishMap(w,h,state.f,p.v);fishKey=key;}
+  const dest=sc.createImageData(w,h),d=dest.data;
+  for(let i=0;i<fishMap.length;i++){const k=i*4,j=fishMap[i];if(j>=0){d[k]=data[j];d[k+1]=data[j+1];d[k+2]=data[j+2];}d[k+3]=255;}
+  pixels=dest;data=dest.data;
+ }
+ const gain=Math.pow(2,p.brightness),lut=new Uint8ClampedArray(256);
+ for(let j=0;j<256;j++)lut[j]=Math.pow(Math.min(1,Math.pow(j/255,2.2)*gain),1/2.2)*255;
+ const noiseAmount=state.ii?1.2*Math.sqrt(p.iso/100):0;
+ let seed=4271;
+ for(let i=0;i<data.length;i+=4){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const noise=((seed>>>24)/255-.5)*2*noiseAmount;data[i]=lut[data[i]]+noise;data[i+1]=lut[data[i+1]]+noise;data[i+2]=lut[data[i+2]]+noise;}
+ ctx.putImageData(pixels,0,0);dirty=false;
+}
+canvas.addEventListener('click',event=>{
+ if(!ready||!subjectRect)return;const bounds=canvas.getBoundingClientRect();let x=(event.clientX-bounds.left)*canvas.width/bounds.width,y=(event.clientY-bounds.top)*canvas.height/bounds.height;
+ if(state.lens==='fish'){const index=fishMap?.[Math.floor(y)*canvas.width+Math.floor(x)];if(index>=0){x=(index/4)%canvas.width;y=Math.floor(index/4/canvas.width);}}
+ const r=subjectRect,inBounds=x>=r.x&&x<r.x+r.w&&y>=r.y&&y<r.y+r.h;
+ const maskX=Math.floor((x-r.x)/r.w*flower.width),maskY=Math.floor((y-r.y)/r.h*flower.height);
+ const isSubject=inBounds&&flowerMask&&flowerMask[(maskY*flower.width+maskX)*4+3]>64;
+ state.focus=isSubject?state.distance:state.distance+9;
+ $('focus-box').style.left=clamp((event.clientX-bounds.left)/bounds.width*100,6,94)+'%';$('focus-box').style.top=clamp((event.clientY-bounds.top)/bounds.height*100,8,88)+'%';updateUI();toast(isSubject?'已对焦花瓶主体':'已对焦背景');
+});
+$('capture').addEventListener('click',()=>{
+ if(!ready)return;render(performance.now());
+ const exported=document.createElement('canvas');exported.width=canvas.width;exported.height=canvas.height;exported.getContext('2d').drawImage(canvas,0,0);
+ const photoUrl=exported.toDataURL('image/png');$('captured-photo').src=photoUrl;$('save-photo').href=photoUrl;$('save-photo').download='光影-'+state.f+'mm-f'+APERTURES[state.ai]+'-ISO'+ISOS[state.ii]+'.png';
+ $('photo-meta').textContent=LENSES[state.lens].name+' · '+state.f+' mm · f/'+APERTURES[state.ai]+' · '+shutterText(SHUTTERS[state.ti])+' · ISO '+ISOS[state.ii];
+ $('photo-dialog').showModal();
+ $('flash').classList.remove('active');void $('flash').offsetWidth;$('flash').classList.add('active');
+});
+for(const id of ['photo-close','photo-return'])$(id).addEventListener('click',()=>$('photo-dialog').close());
+$('photo-dialog').addEventListener('click',e=>{if(e.target===$('photo-dialog')){const r=$('photo-dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('photo-dialog').close();}});
+Object.entries(LENSES).forEach(([key,l],i)=>{const item=document.createElement('article');item.className='guide-item';item.innerHTML=`<h3><span class="guide-index">0${i+1}</span>${l.name}</h3><p>${l.guide}</p>`;$('lens-guide').append(item);});
+function loadImage(img,src){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=src;});}
+Promise.all([loadImage(bg,ASSETS.background),loadImage(flower,ASSETS.subject)]).then(()=>{const mask=document.createElement('canvas');mask.width=flower.width;mask.height=flower.height;const maskCtx=mask.getContext('2d',{willReadFrequently:true});maskCtx.drawImage(flower,0,0);flowerMask=maskCtx.getImageData(0,0,mask.width,mask.height).data;ready=true;resize();$('loading').classList.add('hidden');$('capture').disabled=false;render();}).catch(()=>{$('loading').textContent='场景加载失败，请重新打开 HTML 文件。';});
+new ResizeObserver(resize).observe($('viewfinder'));
+function frame(time){if(ready&&(dirty||(state.motion&&time-lastFrame>100))){render(time);lastFrame=time;}requestAnimationFrame(frame);}requestAnimationFrame(frame);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)dirty=true;});
+updateUI();
+})();
+</script>
+</body>
+</html>
