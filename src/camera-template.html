@@ -90,21 +90,43 @@ zoom:{name:'变焦镜头',f:35,min:24,max:120,distance:3,range:'24–120 mm · �
 };
 const DEFAULT={lens:'standard',f:50,ai:3,ti:4,ii:0,focus:3,distance:3,grid:false,motion:false};
 let state={...DEFAULT}, ready=false, lastFrame=0, dirty=true, toastTimer=0, subjectRect=null, fishMap=null,fishKey='',normalDistance=3;
-const canvas=$('preview'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+const canvas=$('preview'),ctx=canvas.getContext('2d');
 const scene=document.createElement('canvas'),sc=scene.getContext('2d',{willReadFrequently:true});
 const flowerLayer=document.createElement('canvas'),fc=flowerLayer.getContext('2d',{willReadFrequently:true});
+const bgLayer=document.createElement('canvas'),blc=bgLayer.getContext('2d');
+const subjectLayer=document.createElement('canvas'),sbc=subjectLayer.getContext('2d');
+const blurScratch=document.createElement('canvas'),blurScratchCtx=blurScratch.getContext('2d');
+// Safari/iOS Safari do not implement Canvas 2D `filter`; detect it and use a resample fallback.
+const supportsCanvasFilter=(()=>{try{const probe=document.createElement('canvas').getContext('2d');return !!probe&&'filter' in probe&&typeof probe.filter==='string';}catch{return false;}})();
+let blurFallbackNotified=false;
+const toneLut=new Uint8ClampedArray(256);let toneLutGain=NaN;
 const defaultBg=new Image(),defaultFlower=new Image();
 let bg=defaultBg,flower=defaultFlower;
 const sceneConfig={mode:'default',background:null,subject:null,fit:'cover',scale:1,x:0,y:0,gap:9};
-let photoRect=null,backgroundRect=null,importVersion=0,importBusy=false;
+let photoRect=null,backgroundRect=null,tableRect=null,importVersion=0,importBusy=false,photoUrl=null,photoUrlIsObject=false,capturing=false,renderErrorShown=false;
 const ASSETS={background:'__BACKGROUND_DATA__',subject:'__SUBJECT_DATA__'};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const logPosition=(v,min,max)=>Math.round(1000*Math.log(v/min)/Math.log(max/min));
 const logValue=(v,min,max)=>min*Math.pow(max/min,Number(v)/1000);
 const focusMin=()=>Math.max(.08,state.f/1000+.025);
-const distanceMin=()=>Math.max(.12,state.f/1000+.025);
+// Macro focus can reach the ideal 1:1 plane (u = 2f); other lenses keep a 12 cm floor.
+const distanceMin=()=>state.lens==='macro'?Math.max(2*state.f/1000,state.f/1000+.025):Math.max(.12,state.f/1000+.025);
 const distanceText=v=>v<1?(v*100).toFixed(1)+' cm':v.toFixed(2)+' m';
 const shutterText=t=>t<1?'1/'+Math.round(1/t)+' s':t+' s';
+function notifyBlurFallback(){if(blurFallbackNotified)return;blurFallbackNotified=true;toast('当前浏览器不支持 Canvas 滤镜，已启用兼容虚化效果');}
+// Native filter when available; otherwise downsample + smooth upsample approximates a Gaussian blur.
+function drawBlurred(target,img,sx,sy,sw,sh,dx,dy,dw,dh,radius){
+ const r=Math.max(0,Number(radius)||0);
+ if(r<.4){target.drawImage(img,sx,sy,sw,sh,dx,dy,dw,dh);return;}
+ if(supportsCanvasFilter){target.save();target.filter='blur('+r.toFixed(2)+'px)';target.drawImage(img,sx,sy,sw,sh,dx,dy,dw,dh);target.restore();return;}
+ const scale=Math.min(48,Math.max(2,r*2)),tw=Math.max(1,Math.round(Math.abs(dw)/scale)),th=Math.max(1,Math.round(Math.abs(dh)/scale));
+ if(blurScratch.width!==tw||blurScratch.height!==th){blurScratch.width=tw;blurScratch.height=th;}else blurScratchCtx.clearRect(0,0,tw,th);
+ blurScratchCtx.imageSmoothingEnabled=true;if('imageSmoothingQuality' in blurScratchCtx)blurScratchCtx.imageSmoothingQuality='high';
+ blurScratchCtx.drawImage(img,sx,sy,sw,sh,0,0,tw,th);
+ target.save();target.imageSmoothingEnabled=true;if('imageSmoothingQuality' in target)target.imageSmoothingQuality='high';
+ target.drawImage(blurScratch,0,0,tw,th,dx,dy,dw,dh);target.restore();
+ notifyBlurFallback();
+}
 function physics(){
  const f=state.f,s=state.focus*1000,z=state.distance*1000,N=APERTURES[state.ai],t=SHUTTERS[state.ti],iso=ISOS[state.ii];
  const v=f*s/(s-f),m=v/z,k=N*.03*(s-f)/(f*f),near=s/(1+k),far=k<1?s/(1-k):Infinity;
@@ -163,13 +185,14 @@ $('grid-toggle').addEventListener('click',()=>{state.grid=!state.grid;updateUI()
 $('motion-toggle').addEventListener('click',()=>{state.motion=!state.motion;updateUI();if(state.motion)toast('已开启主体横向运动，调慢快门观察拖影');});
 $('reset').addEventListener('click',()=>{state={...DEFAULT};fishMap=null;$('focus-box').style.left='calc(50% - 22px)';$('focus-box').style.top='calc(50% - 22px)';updateUI();toast('已恢复标准镜头与默认拍摄参数');});
 $('autofocus').addEventListener('click',()=>{state.focus=state.distance;updateUI();toast((sceneConfig.mode==='photo'?'已对焦照片平面：':'已对焦主体：')+distanceText(state.distance));});
-$('macro-one').addEventListener('click',()=>{state.distance=2*state.f/1000;state.focus=state.distance;updateUI();toast('理想 1∶1 近摄：u = v = 2f，景深变得很浅');});
+$('macro-one').addEventListener('click',()=>{state.distance=Math.max(2*state.f/1000,distanceMin());state.focus=state.distance;updateUI();toast('理想 1∶1 近摄：u = v = 2f，景深变得很浅');});
 function toast(message){$('toast').textContent=message;$('toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('on'),2800);}
 
 function updateSceneUI(){
  const custom=sceneConfig.mode!=='default',flat=sceneConfig.mode==='photo';
  $('scene-badge').textContent=custom?(flat?'我的照片':'分层场景'):'默认场景';
  $('upload-photo').disabled=$('upload-subject').disabled=!ready||importBusy;
+ $('capture').disabled=!ready||importBusy||capturing;
  $('restore-scene').disabled=!ready||(!custom&&!importBusy);
  $('scene-status').textContent=importBusy?'正在读取照片…':custom?(flat?'照片已载入，调节镜头与参数观察变化。':'主体与背景分别成像，点击画面选择对焦。'):'支持 JPG / PNG / WebP，或直接拖入取景框。';
  $('custom-scene-controls').hidden=!custom;
@@ -194,12 +217,21 @@ async function readPhoto(file,kind){
  if(file.size>20*1024*1024)throw new Error('图片超过 20 MB，请压缩后再试。');
  const url=URL.createObjectURL(file),image=new Image();
  try{
-  await loadImage(image,url);
+  await loadImage(image,url,15000);
   const sw=image.naturalWidth,sh=image.naturalHeight;
   if(!sw||!sh)throw new Error('无法读取图片尺寸。');
+  // Reject before drawing to a canvas: a 50 MP+ decode can exhaust an iOS tab.
+  if(sw*sh>50000000)throw new Error('图片分辨率过高（约 '+Math.round(sw*sh/10000)+' 万像素，上限 5000 万），请先缩小后再试。');
   const ratio=Math.min(1,2400/Math.max(sw,sh),Math.sqrt(4000000/(sw*sh)));
   const c=document.createElement('canvas');c.width=Math.max(1,Math.floor(sw*ratio));c.height=Math.max(1,Math.floor(sh*ratio));
-  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(image,0,0,c.width,c.height);
+  const g=c.getContext('2d',{willReadFrequently:true});
+  let bitmap=null;
+  if(typeof createImageBitmap==='function'){
+   // Decode straight to the target size when supported, avoiding a second full-size surface.
+   try{bitmap=await createImageBitmap(file,{resizeWidth:c.width,resizeHeight:c.height,resizeQuality:'high',imageOrientation:'from-image'});}catch{}
+  }
+  if(bitmap){g.drawImage(bitmap,0,0,c.width,c.height);if(typeof bitmap.close==='function')bitmap.close();}
+  else g.drawImage(image,0,0,c.width,c.height);
   const pixels=kind==='subject'?g.getImageData(0,0,c.width,c.height).data:null;
   let hasTransparency=false;if(pixels)for(let i=3;i<pixels.length;i+=4)if(pixels[i]<250){hasTransparency=true;break;}
   const thumb=document.createElement('canvas'),r=Math.min(1,96/Math.max(c.width,c.height));thumb.width=Math.max(1,Math.round(c.width*r));thumb.height=Math.max(1,Math.round(c.height*r));thumb.getContext('2d').drawImage(c,0,0,thumb.width,thumb.height);
@@ -233,16 +265,29 @@ $('viewfinder').addEventListener('dragenter',event=>{if(event.dataTransfer?.type
 $('viewfinder').addEventListener('dragover',event=>{if(event.dataTransfer?.types.includes('Files')){event.preventDefault();event.dataTransfer.dropEffect='copy';}});
 $('viewfinder').addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;$('viewfinder').classList.remove('is-dragging');}});
 $('viewfinder').addEventListener('drop',event=>{event.preventDefault();dragDepth=0;$('viewfinder').classList.remove('is-dragging');const files=event.dataTransfer?.files;if(files?.length)importPhoto(files[0],'background');});
-window.addEventListener('dragover',event=>{if(event.dataTransfer?.types.includes('Files'))event.preventDefault();});
-window.addEventListener('drop',event=>{if(event.dataTransfer?.files.length)event.preventDefault();});
+// Never let a drop navigate the page; only a file drop inside the viewfinder imports.
+window.addEventListener('dragover',event=>{const dt=event.dataTransfer;if(!dt)return;event.preventDefault();if(!dt.types.includes('Files'))dt.dropEffect='none';});
+window.addEventListener('drop',event=>{if(event.dataTransfer)event.preventDefault();});
 function drawPhotoPlane(p,w,h){
  const fit=sceneConfig.fit==='contain'?Math.min:Math.max;
  const scale=fit(w/bg.width,h/bg.height)*(p.v/(50*3000/(3000-50)))*(3000/p.z),bw=bg.width*scale,bh=bg.height*scale;
  photoRect={x:(w-bw)/2,y:(h-bh)/2,w:bw,h:bh};
- sc.fillStyle='#252936';sc.fillRect(0,0,w,h);sc.save();sc.filter=`blur(${Math.min(60,p.blur(p.z)*w/36/4).toFixed(2)}px)`;sc.drawImage(bg,photoRect.x,photoRect.y,bw,bh);sc.restore();subjectRect=null;
+ sc.fillStyle='#252936';sc.fillRect(0,0,w,h);drawBlurred(sc,bg,0,0,bg.width,bg.height,photoRect.x,photoRect.y,bw,bh,Math.min(60,p.blur(p.z)*w/36/4));subjectRect=null;
 }
 
-function resize(){const w=Math.min(1200,Math.max(320,Math.round(canvas.getBoundingClientRect().width*1.25)));canvas.width=scene.width=flowerLayer.width=w;canvas.height=scene.height=flowerLayer.height=Math.round(w/1.5);fishMap=null;dirty=true;}
+const PREVIEW_SCALE=.7,PREVIEW_MAX_PIXELS=800000,EXPORT_WIDTH=2400,EXPORT_HEIGHT=1600;
+function setSizes(w,h){
+ canvas.width=scene.width=flowerLayer.width=bgLayer.width=subjectLayer.width=w;
+ canvas.height=scene.height=flowerLayer.height=bgLayer.height=subjectLayer.height=h;
+ fishMap=null;
+}
+function resize(){
+ const cssWidth=Math.max(280,canvas.getBoundingClientRect().width||0);
+ const dpr=Math.min(window.devicePixelRatio||1,2);
+ let w=Math.round(cssWidth*dpr*PREVIEW_SCALE),h=Math.round(w/1.5);
+ if(w*h>PREVIEW_MAX_PIXELS){const k=Math.sqrt(PREVIEW_MAX_PIXELS/(w*h));w=Math.max(320,Math.round(w*k));h=Math.round(w/1.5);}
+ setSizes(Math.max(1,w),Math.max(1,h));dirty=true;
+}
 function drawCover(context,img,cx,cy,dw,dh){context.drawImage(img,cx-dw/2,cy-dh/2,dw,dh);}
 function createFishMap(w,h,f,v){
  // Inverse equidistant projection: r=f*theta, rectilinear source r=f*tan(theta).
@@ -258,17 +303,22 @@ function createFishMap(w,h,f,v){
 function render(now=0){
  if(!ready)return;
  const p=physics(),w=canvas.width,h=canvas.height,pxPerMm=w/36;
+ tableRect=null;
  sc.clearRect(0,0,w,h);sc.fillStyle='#5e6958';sc.fillRect(0,0,w,h);
- if(sceneConfig.mode==='photo'){drawPhotoPlane(p,w,h);}else{
+ if(sceneConfig.mode==='photo'){backgroundRect=null;drawPhotoPlane(p,w,h);}else{
  photoRect=null;
  const fit=sceneConfig.fit==='contain'?Math.min:Math.max;
  const bgScale=sceneConfig.background?fit(w/bg.width,h/bg.height)*p.v/(50*3000/(3000-50))*12000/p.bgZ:Math.max(w/bg.width,h/bg.height)*p.v/18*12000/p.bgZ;
  const bBlur=Math.min(45,p.blur(p.bgZ)*pxPerMm/4);
- // Reflected copies fill crop edges of the finite source without introducing empty strips.
- sc.save();sc.filter=`blur(${bBlur.toFixed(2)}px)`;
  const bw=bg.width*bgScale,bh=bg.height*bgScale;
  backgroundRect=sceneConfig.background?{x:(w-bw)/2,y:(h-bh)/2,w:bw,h:bh}:null;
- if(sceneConfig.background){sc.drawImage(bg,(w-bw)/2,(h-bh)/2,bw,bh);}else{for(let iy=-1;iy<=1;iy++)for(let ix=-1;ix<=1;ix++){sc.save();sc.translate(w/2+ix*bw,h/2+iy*bh);sc.scale(ix%2?-1:1,iy%2?-1:1);sc.drawImage(bg,-bw/2,-bh/2,bw,bh);sc.restore();}}sc.restore();
+ if(sceneConfig.background){drawBlurred(sc,bg,0,0,bg.width,bg.height,(w-bw)/2,(h-bh)/2,bw,bh,bBlur);}
+ else{
+  // Reflected copies fill crop edges of the finite source without introducing empty strips.
+  blc.clearRect(0,0,w,h);
+  for(let iy=-1;iy<=1;iy++)for(let ix=-1;ix<=1;ix++){blc.save();blc.translate(w/2+ix*bw,h/2+iy*bh);blc.scale(ix%2?-1:1,iy%2?-1:1);blc.drawImage(bg,-bw/2,-bh/2,bw,bh);blc.restore();}
+  drawBlurred(sc,bgLayer,0,0,w,h,0,0,w,h,bBlur);
+ }
  fc.clearRect(0,0,w,h);
  const ph=900*p.v/p.z*w/36*sceneConfig.scale,pw=ph*flower.width/flower.height;
  const macro=state.lens==='macro',anchorY=sceneConfig.subject ? .5 : (macro ? .18 : .53);
@@ -279,32 +329,47 @@ function render(now=0){
  const cx=baseX+shift,top=baseY-ph*anchorY;
  // A separate foreground surface is at the subject depth, not the distant garden depth.
  const tableTop=top+ph*.93;
- if(sceneConfig.mode==='default'&&!macro&&tableTop<h){sc.save();sc.filter=`blur(${Math.min(60,p.blur(p.z)*pxPerMm/4).toFixed(2)}px)`;sc.drawImage(bg,0,bg.height*.73,bg.width,bg.height*.2,-10,tableTop,w+20,h-tableTop+10);sc.restore();sc.save();sc.filter='blur(4px)';sc.fillStyle='#2d20172c';sc.beginPath();sc.ellipse(cx,top+ph*.974-2,Math.max(6,pw*.19),Math.max(3,ph*.009),0,0,Math.PI*2);sc.fill();sc.restore();}
+ if(sceneConfig.mode==='default'&&!macro&&tableTop<h){
+  tableRect={x:0,y:tableTop,w,h:h-tableTop};
+  drawBlurred(sc,bg,0,bg.height*.73,bg.width,bg.height*.2,-10,tableTop,w+20,h-tableTop+10,Math.min(60,p.blur(p.z)*pxPerMm/4));
+  sc.save();if(supportsCanvasFilter)sc.filter='blur(4px)';else sc.globalAlpha=.55;
+  sc.fillStyle='#2d20172c';sc.beginPath();sc.ellipse(cx,top+ph*.974-2,Math.max(6,pw*.19),Math.max(3,ph*.009),0,0,Math.PI*2);sc.fill();sc.restore();
+ }
  const smear=state.motion?amplitude*rate*p.t*1000*p.v/p.z*pxPerMm:0;
- const samples=smear>1?Math.min(60,Math.max(3,Math.ceil(smear/3))):1;
- // Mean multiple positions, including the background at each exposure sample.
+ // Cap trail samples: more than ~24 adds cost without a visible difference at normal exposure times.
+ const samples=smear>1?Math.min(24,Math.max(3,Math.ceil(smear/4))):1;
  const subjectBlur=Math.min(60,p.blur(p.z)*pxPerMm/4);
- fc.save();fc.filter=`blur(${subjectBlur.toFixed(2)}px)`;fc.globalCompositeOperation='lighter';fc.globalAlpha=1/samples;
+ // Blur once into an offscreen layer, then average shifted copies; equivalent for a linear blur.
+ sbc.clearRect(0,0,w,h);
+ drawBlurred(sbc,flower,0,0,flower.width,flower.height,cx-pw/2,top,pw,ph,subjectBlur);
+ fc.save();fc.globalCompositeOperation='lighter';fc.globalAlpha=1/samples;
  for(let i=0;i<samples;i++){
   const offsetTime=samples===1?0:(i/(samples-1)-.5)*p.t;
   const dx=state.motion?(amplitude*Math.sin((timeSec+offsetTime)*rate)-worldShift)*1000*p.v/p.z*pxPerMm:0;
-  fc.drawImage(flower,cx-pw/2+dx,top,pw,ph);
+  fc.drawImage(subjectLayer,dx,0);
  }
  fc.restore();sc.drawImage(flowerLayer,0,0);
  subjectRect={x:cx-pw/2,y:top,w:pw,h:ph};
  }
+ const noiseAmount=state.ii?1.2*Math.sqrt(p.iso/100):0;
+ // Near-unity gain with no noise: the tone pass would be identity, so skip the full readback.
+ if(state.lens!=='fish'&&noiseAmount===0&&Math.abs(p.brightness)<.003){ctx.drawImage(scene,0,0);dirty=false;return;}
+ const gain=Math.pow(2,p.brightness);
+ if(gain!==toneLutGain){for(let j=0;j<256;j++)toneLut[j]=Math.pow(Math.min(1,Math.pow(j/255,2.2)*gain),1/2.2)*255;toneLutGain=gain;}
  let pixels=sc.getImageData(0,0,w,h),data=pixels.data;
  if(state.lens==='fish'){
   const key=w+':'+h+':'+state.f+':'+p.v.toFixed(6);if(!fishMap||fishKey!==key){fishMap=createFishMap(w,h,state.f,p.v);fishKey=key;}
   const dest=sc.createImageData(w,h),d=dest.data;
+  if(noiseAmount===0){
+   // Fuse the tone pass into the remap pass: one full-frame loop instead of two.
+   for(let i=0;i<fishMap.length;i++){const k=i*4,j=fishMap[i];if(j>=0){d[k]=toneLut[data[j]];d[k+1]=toneLut[data[j+1]];d[k+2]=toneLut[data[j+2]];}d[k+3]=255;}
+   ctx.putImageData(dest,0,0);dirty=false;return;
+  }
   for(let i=0;i<fishMap.length;i++){const k=i*4,j=fishMap[i];if(j>=0){d[k]=data[j];d[k+1]=data[j+1];d[k+2]=data[j+2];}d[k+3]=255;}
   pixels=dest;data=dest.data;
- }
- const gain=Math.pow(2,p.brightness),lut=new Uint8ClampedArray(256);
- for(let j=0;j<256;j++)lut[j]=Math.pow(Math.min(1,Math.pow(j/255,2.2)*gain),1/2.2)*255;
- const noiseAmount=state.ii?1.2*Math.sqrt(p.iso/100):0;
+ }else if(noiseAmount===0){for(let i=0;i<data.length;i+=4){data[i]=toneLut[data[i]];data[i+1]=toneLut[data[i+1]];data[i+2]=toneLut[data[i+2]];}ctx.putImageData(pixels,0,0);dirty=false;return;}
  let seed=4271;
- for(let i=0;i<data.length;i+=4){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const noise=((seed>>>24)/255-.5)*2*noiseAmount;data[i]=lut[data[i]]+noise;data[i+1]=lut[data[i+1]]+noise;data[i+2]=lut[data[i+2]]+noise;}
+ for(let i=0;i<data.length;i+=4){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const noise=((seed>>>24)/255-.5)*2*noiseAmount;data[i]=toneLut[data[i]]+noise;data[i+1]=toneLut[data[i+1]]+noise;data[i+2]=toneLut[data[i+2]]+noise;}
  ctx.putImageData(pixels,0,0);dirty=false;
 }
 canvas.addEventListener('click',event=>{
@@ -318,26 +383,66 @@ canvas.addEventListener('click',event=>{
   if(!subjectRect)return;
   // Hit-test the rendered alpha, including defocus and the actual exposure trail.
   const isSubject=fc.getImageData(Math.floor(x),Math.floor(y),1,1).data[3]>64;
-  const b=backgroundRect;if(!isSubject&&b&&(x<b.x||x>=b.x+b.w||y<b.y||y>=b.y+b.h))return;
-  state.focus=isSubject?state.distance:state.distance+sceneConfig.gap;message=isSubject?'已对焦主体':'已对焦背景';
+  const b=backgroundRect;
+  if(isSubject){state.focus=state.distance;message='已对焦主体';}
+  else if(tableRect&&x>=tableRect.x&&x<tableRect.x+tableRect.w&&y>=tableRect.y&&y<tableRect.y+tableRect.h){state.focus=state.distance;message='已对焦木桌';}
+  else if(b&&(x<b.x||x>=b.x+b.w||y<b.y||y>=b.y+b.h))return;
+  else{state.focus=state.distance+sceneConfig.gap;message='已对焦背景';}
  }
  $('focus-box').style.left=clamp((event.clientX-bounds.left)/bounds.width*100,6,94)+'%';$('focus-box').style.top=clamp((event.clientY-bounds.top)/bounds.height*100,8,88)+'%';updateUI();toast(message);
 });
-$('capture').addEventListener('click',()=>{
- if(!ready)return;render(performance.now());
- const exported=document.createElement('canvas');exported.width=canvas.width;exported.height=canvas.height;exported.getContext('2d').drawImage(canvas,0,0);
- const photoUrl=exported.toDataURL('image/png');$('captured-photo').src=photoUrl;$('save-photo').href=photoUrl;$('save-photo').download='光影-'+state.f+'mm-f'+APERTURES[state.ai]+'-ISO'+ISOS[state.ii]+'.png';
- $('photo-meta').textContent=(sceneConfig.mode==='photo'?'自定义照片 · ':sceneConfig.mode==='layered'?'分层场景 · ':'')+LENSES[state.lens].name+' · '+state.f+' mm · f/'+APERTURES[state.ai]+' · '+shutterText(SHUTTERS[state.ti])+' · ISO '+ISOS[state.ii];
- $('photo-dialog').showModal();
- $('flash').classList.remove('active');void $('flash').offsetWidth;$('flash').classList.add('active');
+function clearPhotoUrl(){if(photoUrl){if(photoUrlIsObject)URL.revokeObjectURL(photoUrl);photoUrl=null;photoUrlIsObject=false;}}
+function renderForExport(w,h){
+ const prevW=canvas.width,prevH=canvas.height;
+ try{
+  setSizes(w,h);render(performance.now());
+  const exported=document.createElement('canvas');exported.width=w;exported.height=h;exported.getContext('2d').drawImage(canvas,0,0);
+  return exported;
+ }finally{setSizes(prevW,prevH);try{render(performance.now());}catch(error){console.error(error);}}
+}
+async function encodeCanvas(target){
+ if(typeof target.toBlob==='function'){
+  try{
+   const blob=await new Promise((resolve,reject)=>{try{target.toBlob(blob=>resolve(blob),'image/png');}catch(error){reject(error);}});
+   if(blob)return {url:URL.createObjectURL(blob),object:true};
+  }catch(error){console.error(error);}
+ }
+ try{return {url:target.toDataURL('image/png'),object:false};}catch(error){throw new Error('照片编码失败');}
+}
+$('capture').addEventListener('click',async()=>{
+ if(!ready||importBusy||capturing)return;
+ capturing=true;updateSceneUI();
+ try{
+  let encoded;
+  try{encoded=await encodeCanvas(renderForExport(EXPORT_WIDTH,EXPORT_HEIGHT));}
+  catch(error){
+   console.error(error);
+   $('captured-photo').removeAttribute('src');$('save-photo').hidden=true;
+   $('photo-meta').textContent='照片导出失败，请缩小窗口或换用其他浏览器后再试。';
+   $('photo-dialog').showModal();toast('照片导出失败，请稍后再试');
+   return;
+  }
+  clearPhotoUrl();photoUrl=encoded.url;photoUrlIsObject=encoded.object;
+  $('captured-photo').src=photoUrl;$('save-photo').hidden=false;$('save-photo').href=photoUrl;
+  $('save-photo').download='光影-'+state.f+'mm-f'+APERTURES[state.ai]+'-ISO'+ISOS[state.ii]+'.png';
+  $('photo-meta').textContent=(sceneConfig.mode==='photo'?'自定义照片 · ':sceneConfig.mode==='layered'?'分层场景 · ':'')+LENSES[state.lens].name+' · '+state.f+' mm · f/'+APERTURES[state.ai]+' · '+shutterText(SHUTTERS[state.ti])+' · ISO '+ISOS[state.ii];
+  $('photo-dialog').showModal();
+  $('flash').classList.remove('active');void $('flash').offsetWidth;$('flash').classList.add('active');
+ }catch(error){console.error(error);clearPhotoUrl();toast('照片导出失败，请稍后再试');}
+ finally{capturing=false;updateSceneUI();}
 });
 for(const id of ['photo-close','photo-return'])$(id).addEventListener('click',()=>$('photo-dialog').close());
+$('photo-dialog').addEventListener('close',()=>{$('captured-photo').removeAttribute('src');clearPhotoUrl();});
 $('photo-dialog').addEventListener('click',e=>{if(e.target===$('photo-dialog')){const r=$('photo-dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('photo-dialog').close();}});
 Object.entries(LENSES).forEach(([key,l],i)=>{const item=document.createElement('article');item.className='guide-item';item.innerHTML=`<h3><span class="guide-index">0${i+1}</span>${l.name}</h3><p>${l.guide}</p>`;$('lens-guide').append(item);});
-function loadImage(img,src){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=src;});}
-Promise.all([loadImage(defaultBg,ASSETS.background),loadImage(defaultFlower,ASSETS.subject)]).then(()=>{applySubject();ready=true;resize();$('loading').classList.add('hidden');$('capture').disabled=false;updateUI();render();}).catch(()=>{$('loading').textContent='场景加载失败，请重新打开 HTML 文件。';});
+function loadImage(img,src,timeout=20000){return new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>{if(settled)return;settled=true;img.onload=img.onerror=null;reject(new Error('图片加载超时'));},timeout);img.onload=()=>{if(settled)return;settled=true;clearTimeout(timer);resolve();};img.onerror=()=>{if(settled)return;settled=true;clearTimeout(timer);reject(new Error('图片加载失败'));};img.src=src;});}
+Promise.all([loadImage(defaultBg,ASSETS.background),loadImage(defaultFlower,ASSETS.subject)]).then(()=>{applySubject();ready=true;resize();$('loading').classList.add('hidden');updateUI();render();}).catch(()=>{$('loading').textContent='场景加载失败，请重新打开 HTML 文件。';});
 new ResizeObserver(resize).observe($('viewfinder'));
-function frame(time){if(ready&&(dirty||(state.motion&&time-lastFrame>100))){render(time);lastFrame=time;}requestAnimationFrame(frame);}requestAnimationFrame(frame);
+function frame(time){
+ try{if(ready&&(dirty||(state.motion&&time-lastFrame>100))){render(time);lastFrame=time;}}
+ catch(error){if(!renderErrorShown){renderErrorShown=true;console.error(error);toast('画面渲染出错，已继续重试；如持续出现请刷新页面');}}
+ finally{requestAnimationFrame(frame);}
+}requestAnimationFrame(frame);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)dirty=true;});
 updateUI();
 })();
