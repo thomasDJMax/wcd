@@ -62,8 +62,8 @@ python3 build.py
 ├── src/
 │   └── camera-template.html    # 页面、样式与模拟逻辑
 ├── assets/
-│   ├── background.png         # 花园背景
-│   └── subject.png            # 带透明通道的花瓶主体
+│   ├── background.webp        # 花园背景（WebP，内联进成品）
+│   └── subject.webp           # 带透明通道的花瓶主体（WebP）
 └── docs/
     ├── 使用说明.md             # 操作、公式与模型说明
     └── camera-preview.png      # 界面预览
