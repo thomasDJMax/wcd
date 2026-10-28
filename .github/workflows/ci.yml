@@ -1,0 +1,35 @@
+name: Build check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wcd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build the standalone simulator
+        run: python3 build.py
+
+      - name: Check the committed HTML matches the build
+        run: |
+          if ! git diff --quiet -- camera-simulator.html; then
+            echo "::error::camera-simulator.html is out of date. Run 'python3 build.py' and commit the result."
+            git diff --stat -- camera-simulator.html
+            exit 1
+          fi
+          echo "camera-simulator.html is up to date."
